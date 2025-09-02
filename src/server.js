@@ -75,8 +75,8 @@ app.get("/", (_q, res) => res.type("html").send(`
   <p>Use <code>x-api-key</code> for /v1/voices and /v1/tts.</p>
   <hr>
   <h2>Quick Test</h2>
-  <p>API Key: <code>odiadev_10abb658e85c30550ed75b30e7f55836</code></p>
-  <p>Test with: <code>curl -H "x-api-key: odiadev_10abb658e85c30550ed75b30e7f55836" http://localhost:8080/v1/voices</code></p>
+  <p>Use your API key with the <code>x-api-key</code> header</p>
+  <p>Example: <code>curl -H "x-api-key: YOUR_API_KEY" http://localhost:8080/v1/voices</code></p>
 `));
 
 app.get("/v1/health", (_q, res) => res.json({ status: "ok", brand: "ODIADEV TTS", model: MODEL, voices: voices.profiles.length }));

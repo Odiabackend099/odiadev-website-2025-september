@@ -4,12 +4,17 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Environment variables
+# Environment variables and secrets
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.server
+*.env
+deploy/ec2/.env*
+**/secrets/
+**/keys/
 
 # Logs
 logs
@@ -115,10 +120,10 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
-*.swo
+*.swp
 *~
 
-# Test files
+# Test files and generated audio
 sample.mp3
 output.mp3
 *.mp3
@@ -126,6 +131,8 @@ output.mp3
 *.opus
 *.aac
 *.flac
+nigerian_*.mp3
+test_*.mp3
 
 # Deployment artifacts
 deploy/ec2/.env
@@ -133,3 +140,12 @@ deploy/ec2/.env.server
 
 # Swap files
 /swapfile
+
+# Security: Never commit these
+**/secrets/
+**/keys/
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12
+**/*.pfx
