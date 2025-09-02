@@ -1,3 +1,5 @@
+
+
 import "dotenv/config";
 import express from "express";
 import morgan from "morgan";
@@ -15,7 +17,10 @@ const ALLOW = (process.env.ALLOWED_ORIGINS || "").split(";").map(s => s.trim()).
 const FORMAT_DEFAULT = process.env.DEFAULT_AUDIO_FORMAT || "mp3";
 const RATE = parseInt(process.env.RATE_LIMIT || "120", 10);
 
-if (!OPENAI_KEY) { console.error("[FATAL] OPENAI_API_KEY missing"); process.exit(1); }
+if (!OPENAI_KEY) {
+  console.error("[FATAL] OPENAI_API_KEY missing");
+  process.exit(1);
+}
 
 const client = new OpenAI({ apiKey: OPENAI_KEY });
 const app = express();
@@ -24,7 +29,6 @@ const app = express();
 function parseKeys() {
   return (process.env.ODIADEV_API_KEYS || "").split(";").map(s => s.trim()).filter(Boolean);
 }
-
 const SERVICE_KEYS = parseKeys();
 
 // Timing-safe comparison for security
@@ -34,14 +38,13 @@ function tsEqual(a, b) {
 }
 
 function extractToken(req) {
-  return (req.header("x-api-key") || "").trim() || 
+  return (req.header("x-api-key") || "").trim() ||
          (req.header("authorization") || "").replace(/^Bearer /i, "").trim();
 }
 
 function requireServiceKey(req, res, next) {
   const token = extractToken(req);
   if (!token) return res.status(401).json({ error: "Unauthorized" });
-  
   if (!SERVICE_KEYS.some(key => tsEqual(key, token))) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -55,7 +58,7 @@ app.use(cors({
     const ok = ALLOW.some(p => p.includes("*") 
       ? new RegExp("^" + p.replace(/\./g,"\\.").replace(/\*/g,".*") + "$").test(o) 
       : o === p);
-    cb(ok ? null : new Error("CORS"), ok);
+    cb(ok ? null : new Error("CORS blocked"), ok);
   }
 }));
 app.use(express.json({ limit: "1mb" }));
@@ -88,16 +91,26 @@ const TTSBody = z.object({
   tone: z.enum(["neutral","friendly","bold","calm","sales","support","ads"]).optional().default("neutral")
 });
 
-function buildPrompt(text, tone) {
-  const hints = {
-    friendly: "Read with friendly Nigerian English vibe, add light Pidgin. ",
-    bold: "Read confidently in Nigerian English. ",
-    calm: "Read calmly with steady pacing. ",
-    sales: "Read persuasive, upbeat. ",
-    support: "Read empathetic, reassuring. ",
-    ads: "Read catchy and punchy. "
+function buildPrompt(text, profile, tone) {
+  // Nigerian accent + tone hints based on voice profile
+  let accentLead = "";
+  
+  if (profile.voice_id.includes("naija_female")) {
+    accentLead = "Read as a NIGERIAN FEMALE voice with authentic Naija English cadence. ";
+  } else if (profile.voice_id.includes("naija_male")) {
+    accentLead = "Read as a NIGERIAN MALE voice with authentic Naija English cadence. ";
+  }
+  
+  const toneHints = {
+    friendly: "Make it warm, welcoming and friendly. Add light Pidgin where natural. ",
+    bold: "Deliver with confidence and presence. ",
+    calm: "Keep it calm and steady. ",
+    sales: "Persuasive and upbeat for marketing. ",
+    support: "Empathetic and reassuring. ",
+    ads: "Catchy and punchy for short ads. "
   };
-  return (hints[tone] || "") + text;
+  
+  return (accentLead + (toneHints[tone] || "") + text).trim();
 }
 
 function mime(fmt) {
@@ -116,10 +129,12 @@ app.post("/v1/tts", requireServiceKey, async (req, res) => {
   if (!profile) return res.status(400).json({ error: "Unknown voice_id" });
   
   try {
+    const input = buildPrompt(p.text, profile, p.tone);
+    
     const speech = await client.audio.speech.create({
       model: MODEL,
       voice: profile.openai_voice,
-      input: buildPrompt(p.text, p.tone),
+      input: input,
       format: p.format,
       speed: p.speed
     });
