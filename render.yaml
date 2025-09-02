@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: odiadev-tts
+    env: docker
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ODIADEV_API_KEY
+        sync: false
+      - key: MODEL
+        value: gpt-4o-mini-tts
+      - key: PORT
+        value: "8080"
+      - key: ALLOWED_ORIGINS
+        value: "https://*.odia.dev;https://*.odiadev.com"
+      - key: DEFAULT_AUDIO_FORMAT
+        value: mp3
+      - key: RATE_LIMIT
+        value: "120"

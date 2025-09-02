@@ -1,0 +1,25 @@
+{
+  "profiles": [
+    {
+      "voice_id": "naija_male_deep",
+      "openai_voice": "onyx",
+      "description": "Nigerian male, deep & calm authority; announcements/news/support."
+    },
+    {
+      "voice_id": "naija_female_warm",
+      "openai_voice": "verse",
+      "description": "Nigerian female, warm & lively; onboarding/conversational."
+    },
+    {
+      "voice_id": "us_male_story",
+      "openai_voice": "sage",
+      "description": "US male, calm storyteller; explainer videos & narration."
+    },
+    {
+      "voice_id": "us_female_clear",
+      "openai_voice": "coral",
+      "description": "US female, confident & clear; ads & CTAs."
+    }
+  ],
+  "notes": "You can swap 'openai_voice' to any available OpenAI preset later."
+}

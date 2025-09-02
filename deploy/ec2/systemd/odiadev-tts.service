@@ -1,0 +1,19 @@
+[Unit]
+Description=ODIADEV TTS Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/odiadev-tts
+EnvironmentFile=/etc/odiadev-tts/.env
+ExecStart=/usr/bin/node /opt/odiadev-tts/src/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=odiadev-tts
+
+[Install]
+WantedBy=multi-user.target

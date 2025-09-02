@@ -1,0 +1,24 @@
+{
+  "name": "odiadev-tts",
+  "version": "1.0.0",
+  "description": "ODIADEV TTS (ODIADEV Zone Solution) — Secure proxy over OpenAI gpt-4o-mini-tts with Nigerian & US voice profiles",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "scripts/smoke.sh"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "morgan": "^1.10.0",
+    "openai": "^4.56.0",
+    "zod": "^3.23.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
