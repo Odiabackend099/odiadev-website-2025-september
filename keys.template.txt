@@ -1,9 +1,1 @@
-# ODIADEV TTS API Keys
-# Add your API keys here, one per line
-# Format: tts_[32-hex-characters] or odiadev_[32-hex-characters]
-# Example:
-# tts_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-# odiadev_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-# tts_cccccccccccccccccccccccccccccccc
-
-# Replace this file with your actual keys after deployment
+# Your ODIADEV API keys (replace after boot with your real keys; one per line)

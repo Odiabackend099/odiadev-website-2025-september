@@ -1,12 +1,14 @@
 #!/bin/bash
-# ODIADEV TTS — EC2 User Data (OpenAI engine)
-# Goal: Public HTTP TTS proxy (OpenAI) with your own ODIADEV API keys and universal CORS.
+# ODIADEV TTS — EC2 User Data (Ubuntu 22.04 LTS)
+# Engine: OpenAI TTS (gpt-4o-mini-tts) via Flask + Gunicorn behind Nginx
+# Auth: Your own ODIADEV keys in /opt/tts-api/keys.txt (one per line)
+# CORS: Universal (*) so ANY project can call it worldwide
 set -euxo pipefail
 
-echo "[1/7] Update & packages"
+echo "[1/7] System update & packages"
 apt-get update -y
 apt-get upgrade -y
-apt-get install -y python3 python3-venv python3-pip nginx sqlite3 curl ca-certificates certbot python3-certbot-nginx
+apt-get install -y python3 python3-venv python3-pip nginx sqlite3 curl ca-certificates
 
 # Optional: small swap helps t3.small stability
 if ! swapon --show | grep -q "swapfile"; then
@@ -22,21 +24,11 @@ python3 -m venv venv
 /opt/tts-api/venv/bin/pip install --upgrade pip
 /opt/tts-api/venv/bin/pip install flask==3.0.0 flask-cors==4.0.0 gunicorn==21.2.0 requests==2.31.0
 
-# ----- YOUR KEYS (replace this file after boot with your real keys) -----
-# One key per line, e.g. "tts_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" or "odiadev_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-cat > /opt/tts-api/keys.txt << 'KEYS'
-# ODIADEV TTS API Keys
-# Add your API keys here, one per line
-# Format: tts_[32-hex-characters] or odiadev_[32-hex-characters]
-# Example:
-# tts_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-# odiadev_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-
-# Replace this file with your actual keys after deployment
-KEYS
+# Your ODIADEV API keys (replace after boot with your real keys; one per line)
+touch /opt/tts-api/keys.txt
 chmod 600 /opt/tts-api/keys.txt
 
-# ----- ENV (systemd reads this file) -----
+# Environment file (systemd reads this)
 cat >/opt/tts-api/.env <<'ENV'
 # ==== ODIADEV TTS API (.env) ====
 # Universal CORS so any project can call this API
@@ -57,14 +49,6 @@ ALLOWED_KEYS_FILE=/opt/tts-api/keys.txt
 OPENAI_API_KEY=REPLACE_WITH_YOUR_OPENAI_KEY
 OPENAI_MODEL=gpt-4o-mini-tts
 OPENAI_BASE_URL=https://api.openai.com/v1
-
-# Rate limiting
-RATE_LIMIT_REQUESTS=60
-RATE_LIMIT_WINDOW=60
-RATE_LIMIT_CHARS_PER_DAY=300000
-
-# Admin (optional)
-TTS_ADMIN_TOKEN=admin_change_me_12345
 
 # Gunicorn listen (Nginx proxies public :80 to this)
 PORT=8000
@@ -167,50 +151,37 @@ def openai_tts(text:str, voice_id:str, fmt:str, speed:float)->bytes:
     raise RuntimeError("OPENAI_API_KEY not configured")
   voice = find_openai_voice(voice_id)
   headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
-  payload = {
-    "model": OPENAI_MODEL,
-    "voice": voice,
-    "input": text,
-    "response_format": fmt,
-    "speed": speed
-  }
-  # 3-tier retry for Nigerian networks (250/500/1000 ms)
-  delays = [0.25, 0.5, 1.0]
-  last_err = None
-  for d in delays + [None]:
+  payload = {"model": OPENAI_MODEL, "voice": voice, "input": text, "response_format": fmt, "speed": speed}
+  # 3-tier retry for NG networks
+  for delay in (0.25, 0.5, 1.0, None):
     try:
       r = requests.post(f"{OPENAI_BASE_URL}/audio/speech", headers=headers, json=payload, timeout=45)
-      if r.status_code == 200:
-        return r.content
-      last_err = RuntimeError(f"OpenAI error {r.status_code}: {r.text[:200]}")
+      if r.status_code == 200: return r.content
+      err = RuntimeError(f"OpenAI {r.status_code}: {r.text[:200]}")
     except Exception as e:
-      last_err = e
-    if d is None: break
-    time.sleep(d)
-  raise last_err
+      err = e
+    if delay is None: raise err
+    time.sleep(delay)
 
 @app.route("/v1/tts", methods=["POST","OPTIONS"])
 @need_key
 def tts():
   if request.method == "OPTIONS": return ("",204)
-  data = request.get_json(silent=True) or {}
-  text   = (data.get("text") or "").strip()
-  voice  = data.get("voice_id") or data.get("voiceId") or "naija_female_warm"
-  fmt    = (data.get("format") or DEFAULT_FORMAT).lower()
-  speed  = float(data.get("speed") or DEFAULT_SPEED)
-  tone   = data.get("tone") or DEFAULT_TONE
-  lang   = data.get("lang") or DEFAULT_LANG  # reserved for future prompt shaping
+  data  = request.get_json(silent=True) or {}
+  text  = (data.get("text") or "").strip()
+  voice = data.get("voice_id") or data.get("voiceId") or "naija_female_warm"
+  fmt   = (data.get("format") or DEFAULT_FORMAT).lower()
+  speed = float(data.get("speed") or DEFAULT_SPEED)
+  # tone/lang accepted for forward-compat
+  _tone = data.get("tone") or DEFAULT_TONE
+  _lang = data.get("lang") or DEFAULT_LANG
 
   if not text: return jsonify({"error":"text required"}), 400
   if len(text) > MAX_TEXT_LEN: return jsonify({"error":f"text too long (max {MAX_TEXT_LEN})"}), 400
   if fmt not in FORMATS: fmt = DEFAULT_FORMAT
 
-  # (Optional) prompt shaping based on tone/lang could go here.
-  # For now, pass text raw to OpenAI.
-
   audio = openai_tts(text, voice, fmt, speed)
 
-  # best-effort usage log
   try:
     con = sqlite3.connect(DB_PATH); cur = con.cursor()
     cur.execute("INSERT INTO usage(user_key,endpoint,chars,req_id) VALUES(?,?,?,?)",
@@ -228,7 +199,7 @@ if __name__ == "__main__":
 PY
 chmod +x /opt/tts-api/tts_api_server.py
 
-echo "[4/7] systemd"
+echo "[4/7] systemd service"
 cat >/etc/systemd/system/tts-api.service <<'UNIT'
 [Unit]
 Description=ODIADEV TTS (OpenAI Proxy)
@@ -250,7 +221,7 @@ UNIT
 systemctl daemon-reload
 systemctl enable tts-api
 
-echo "[5/7] Nginx (universal CORS, proxy)"
+echo "[5/7] Nginx (universal CORS, proxy to gunicorn)"
 cat >/etc/nginx/conf.d/tts-api.conf <<'NG'
 server {
   listen 80 default_server;
@@ -294,43 +265,6 @@ systemctl restart tts-api
 sleep 3
 curl -fsS http://127.0.0.1/v1/health || true
 
-# Get public IP for final instructions
-PUBLIC_IP=$(curl -s --max-time 10 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || curl -s --max-time 10 ifconfig.me 2>/dev/null || echo "YOUR_EC2_IP")
-
-echo "[7/7] DONE - ODIADEV TTS API is ready!"
-echo "======================================"
-echo "🌐 Your TTS API is accessible at: http://$PUBLIC_IP"
-echo ""
-echo "⚠️  IMPORTANT NEXT STEPS:"
-echo "1) SSH into your EC2 instance and set your OpenAI key:"
-echo "   sudo sed -i 's/OPENAI_API_KEY=.*/OPENAI_API_KEY=your_actual_openai_key_here/' /opt/tts-api/.env"
-echo ""
-echo "2) Add your ODIADEV API keys to /opt/tts-api/keys.txt (one per line):"
-echo "   sudo nano /opt/tts-api/keys.txt"
-echo "   # Add keys like: tts_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-echo ""
-echo "3) Restart the service:"
-echo "   sudo systemctl restart tts-api"
-echo ""
-echo "🧪 Test your API:"
-echo "curl http://$PUBLIC_IP/v1/health"
-echo ""
-echo "curl -X POST http://$PUBLIC_IP/v1/tts \\"
-echo "  -H 'x-api-key: YOUR_ODIADEV_KEY' -H 'Content-Type: application/json' \\"
-echo "  -d '{\"text\":\"Hello Lagos\",\"voice_id\":\"naija_female_warm\",\"format\":\"mp3\"}' \\"
-echo "  --output hello.mp3"
-echo ""
-echo "🔧 Management commands:"
-echo "systemctl status tts-api"
-echo "systemctl restart tts-api"
-echo "journalctl -u tts-api -f"
-echo "systemctl reload nginx"
-echo ""
-echo "🎉 Your TTS API is ready for universal access!"
-echo "   - CORS enabled for any domain"
-echo "   - All 6 voice IDs available"
-echo "   - 5 audio formats supported"
-echo "   - 7 tone options available"
-echo "   - Ready for Lovable, Vercel, static sites, mobile apps, etc."
-echo ""
+echo "[7/7] READY"
+echo "Update /opt/tts-api/.env with your OPENAI_API_KEY, put your keys in /opt/tts-api/keys.txt, then: sudo systemctl restart tts-api"
 
