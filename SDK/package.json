@@ -1,0 +1,47 @@
+{
+  "name": "odiadev-tts",
+  "version": "1.0.0",
+  "description": "Professional Text-to-Speech SDK for Nigerian and US English Voices - Compatible with OpenAI TTS API format",
+  "main": "odiadev-tts-javascript-sdk.js",
+  "scripts": {
+    "test": "node test.js",
+    "example": "node example.js"
+  },
+  "keywords": [
+    "tts",
+    "text-to-speech",
+    "nigerian",
+    "voice",
+    "ai",
+    "speech",
+    "audio",
+    "openai",
+    "compatible",
+    "elevenlabs",
+    "alternative"
+  ],
+  "author": "ODIADEV",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/odiadev/odiadev-tts-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/odiadev/odiadev-tts-sdk/issues"
+  },
+  "homepage": "https://tts-api.odia.dev",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "odiadev-tts-javascript-sdk.js",
+    "README.md",
+    "LICENSE"
+  ]
+}

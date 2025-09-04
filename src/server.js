@@ -157,9 +157,10 @@ function requireServiceKey(req, res, next) {
 // MIDDLEWARE STACK
 // ============================================================================
 
-// Enhanced CORS with security
+// Enhanced CORS with security - Allow file:// for local testing
 app.use(cors({
   origin(o, cb) {
+    // Allow null origin (file://) for local HTML testing
     if (!o) return cb(null, true);
     
     // Strict origin validation
@@ -180,8 +181,8 @@ app.use(cors({
     cb(ok ? null : new Error("CORS blocked"), ok);
   },
   credentials: false, // Disable credentials for security
-  methods: ['GET', 'POST'], // Restrict HTTP methods
-  allowedHeaders: ['Content-Type', 'x-api-key'] // Restrict headers
+  methods: ['GET', 'POST', 'OPTIONS'], // Include OPTIONS for preflight
+  allowedHeaders: ['Content-Type', 'x-api-key', 'Authorization'] // Include Authorization
 }));
 
 // Security headers
@@ -279,7 +280,7 @@ const TTSBody = z.object({
     .min(1, "Text must be at least 1 character")
     .max(5000, "Text must be at most 5000 characters")
     .refine(text => text.trim().length > 0, "Text cannot be empty"),
-  voice_id: z.enum(["naija_male_deep", "naija_female_warm", "naija_female_bold", "us_male_story"])
+  voice_id: z.enum(["naija_male_deep", "naija_male_warm", "naija_female_warm", "naija_female_bold", "us_male_story", "us_female_clear"])
     .optional()
     .default("naija_female_warm"),
   format: z.enum(["mp3","wav","opus","aac","flac"])

@@ -6,20 +6,30 @@
       "description": "Nigerian male, deep & calm authority; announcements/news/support."
     },
     {
+      "voice_id": "naija_male_warm",
+      "openai_voice": "verse",
+      "description": "Nigerian male, warm & friendly; conversational content."
+    },
+    {
       "voice_id": "naija_female_warm",
       "openai_voice": "coral",
       "description": "Nigerian female, warm & lively; onboarding/conversational."
     },
     {
       "voice_id": "naija_female_bold",
-      "openai_voice": "verse",
+      "openai_voice": "alloy",
       "description": "Nigerian female, bold & confident; ads & announcements."
     },
     {
       "voice_id": "us_male_story",
       "openai_voice": "sage",
       "description": "US male, calm storyteller; explainer videos & narration."
+    },
+    {
+      "voice_id": "us_female_clear",
+      "openai_voice": "amber",
+      "description": "US female, clear & professional; business presentations."
     }
   ],
-  "notes": "Updated mapping: naija_female_warm now uses 'coral' (definitely female), naija_female_bold uses 'verse'"
+  "notes": "Complete voice set matching requirements: naija_male_deep, naija_male_warm, naija_female_warm, naija_female_bold, us_male_story, us_female_clear"
 }

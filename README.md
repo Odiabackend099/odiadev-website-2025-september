@@ -1,364 +1,425 @@
-# 🎤 ODIADEV TTS (ODIADEV Zone Solution)
+# 🎤 ODIADEV TTS API - Production Ready
 
-**Secure proxy over OpenAI gpt-4o-mini-tts with Nigerian & US voice profiles**
+A comprehensive, production-ready Text-to-Speech API built with Flask, featuring Nigerian and US voice profiles, API key authentication, and universal CORS support for all client types.
 
-[![Node.js](https://img.shields.io/badge/Node.js-20.x-green.svg)](https://nodejs.org/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-EC2%20t3.small-orange.svg)](https://aws.amazon.com/ec2/instance-types/)
+## 🚀 Features
 
-## 🚀 Quick Start
-
-### One-Click EC2 Deployment
-
-```bash
-# On your EC2 instance (Ubuntu 22.04 or Amazon Linux 2023)
-sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/yourusername/odiadev-tts/main/deploy/ec2/one-click-deploy.sh)"
-```
-
-### Manual Deployment
-
-1. **Launch EC2 t3.small instance**
-   - OS: Ubuntu 22.04 LTS or Amazon Linux 2023
-   - Security Group: Allow inbound ports 80 (HTTP) and 443 (HTTPS)
-
-2. **Connect and deploy**
-   ```bash
-   # SSH into your instance
-   ssh -i your-key.pem ubuntu@your-instance-ip
-   
-   # Clone repository
-   git clone https://github.com/yourusername/odiadev-tts.git
-   cd odiadev-tts
-   
-   # Run bootstrap (requires sudo)
-   sudo ./deploy/ec2/bootstrap.sh
-   ```
-
-3. **Configure environment**
-   ```bash
-   # Edit environment file
-   sudo nano /etc/odiadev-tts/.env
-   
-   # Add your OpenAI API key
-   OPENAI_API_KEY=sk-your-actual-key-here
-   
-   # Restart service
-   sudo systemctl restart odiadev-tts
-   ```
-
-4. **Test the system**
-   ```bash
-   # Health check
-   curl http://your-instance-ip/v1/health
-   
-   # Run smoke test
-   ./scripts/smoke.sh http://your-instance-ip
-   ```
-
-## 🎭 Voice Profiles
-
-| Voice ID | OpenAI Voice | Description | Best For |
-|-----------|--------------|-------------|----------|
-| `naija_male_deep` | `onyx` | Deep & calm authority | Announcements, news, support |
-| `naija_female_warm` | `verse` | Warm & lively | Onboarding, conversations |
-| `us_male_story` | `sage` | Calm storyteller | Explainer videos, narration |
-| `us_female_clear` | `coral` | Confident & clear | Ads, CTAs, presentations |
-
-## 🔌 API Endpoints
-
-### Health Check
-```bash
-GET /v1/health
-# Returns: {"status":"ok","brand":"ODIADEV TTS","model":"gpt-4o-mini-tts","voices":4}
-```
-
-### List Voices
-```bash
-GET /v1/voices
-Headers: x-api-key: YOUR_ODIADEV_API_KEY
-# Returns: Available voice profiles
-```
-
-### Generate Speech
-```bash
-POST /v1/tts
-Headers: 
-  Content-Type: application/json
-  x-api-key: YOUR_ODIADEV_API_KEY
-
-Body:
-{
-  "text": "Your text here (1-5000 chars)",
-  "voice_id": "naija_female_warm",
-  "format": "mp3",
-  "speed": 1.0,
-  "lang": "en-NG",
-  "tone": "friendly"
-}
-```
-
-**Supported formats:** `mp3`, `wav`, `opus`, `aac`, `flac`  
-**Speed range:** `0.5` to `1.5`  
-**Tones:** `neutral`, `friendly`, `bold`, `calm`, `sales`, `support`, `ads`
-
-## 🌍 Language Support
-
-- **English (Nigerian)**: Primary support with Pidgin integration
-- **Hausa**: Nigerian Hausa dialect
-- **Igbo**: Nigerian Igbo dialect  
-- **Yorùbá**: Nigerian Yoruba dialect
-- **Efik**: Nigerian Efik dialect
-- **Esan**: Nigerian Esan dialect
+- **🌐 Universal CORS Support** - Works with browsers, mobile apps, n8n, and any client
+- **🔐 API Key Authentication** - Secure access control with user management
+- **🎭 Multiple Voice Profiles** - Nigerian and US voices with different tones
+- **📊 Usage Tracking** - Monitor API usage and implement rate limiting
+- **🔄 Retry Logic** - Robust error handling with automatic retries
+- **⚡ High Performance** - Gunicorn + Nginx for production scalability
+- **📱 Mobile Ready** - Optimized for all device types
+- **🔧 Easy Deployment** - One-click EC2 deployment with user-data script
 
 ## 🏗️ Architecture
 
 ```
-Internet → Nginx (Port 80/443) → Node.js App (Port 8080) → OpenAI API
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Client Apps   │    │   Web Browsers  │    │   n8n/Workflows │
+│   (Mobile/Web)  │    │   (CORS Ready)  │    │   (Automation)  │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          └──────────────────────┼──────────────────────┘
+                                 │
+                    ┌─────────────▼─────────────┐
+                    │        Nginx Proxy        │
+                    │    (CORS + SSL + Cache)   │
+                    └─────────────┬─────────────┘
+                                 │
+                    ┌─────────────▼─────────────┐
+                    │     Flask API Server      │
+                    │  (Gunicorn + 4 Workers)   │
+                    └─────────────┬─────────────┘
+                                 │
+                    ┌─────────────▼─────────────┐
+                    │      SQLite Database      │
+                    │  (Users + Voices + Usage) │
+                    └─────────────┬─────────────┘
+                                 │
+                    ┌─────────────▼─────────────┐
+                    │      OpenAI API           │
+                    │   (gpt-4o-mini-tts)       │
+                    └───────────────────────────┘
 ```
 
-- **Nginx**: Reverse proxy with SSL termination
-- **Node.js**: Express.js application with rate limiting
-- **Systemd**: Service management with auto-restart
-- **Environment**: Secure configuration management
+## 📋 API Endpoints
 
-## 🔧 Configuration
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| `GET` | `/v1/health` | Health check | ❌ |
+| `POST` | `/v1/admin/users` | Issue API keys | 🔑 Admin |
+| `GET` | `/v1/voices` | List available voices | ✅ |
+| `POST` | `/v1/voices` | Create custom voice | ✅ |
+| `POST` | `/v1/tts` | Generate speech | ✅ |
+| `GET` | `/v1/usage` | Usage statistics | ✅ |
+
+## 🚀 Quick Start
+
+### 1. Deploy to EC2 (One-Click)
+
+1. **Launch EC2 Instance** (Ubuntu 22.04 LTS)
+2. **Configure Security Group** - Open port 80 (HTTP)
+3. **Paste User Data Script** - Copy contents of `ec2-user-data.sh`
+4. **Wait 5-10 minutes** for deployment to complete
+5. **Test**: `curl http://YOUR_EC2_IP/v1/health`
+
+### 2. Configure API
+
+```bash
+# SSH to your EC2 instance
+ssh -i your-key.pem ubuntu@YOUR_EC2_IP
+
+# Update environment variables
+sudo nano /opt/tts-api/.env
+
+# Set your OpenAI API key
+OPENAI_API_KEY=sk-your-actual-openai-key-here
+
+# Restart service
+sudo systemctl restart tts-api
+```
+
+### 3. Issue API Keys
+
+```bash
+# Issue API key for a user
+curl -X POST http://YOUR_EC2_IP/v1/admin/users \
+  -H "X-Admin-Token: admin_change_me_12345" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com"}'
+```
+
+### 4. Test TTS Generation
+
+```bash
+# Generate speech
+curl -X POST http://YOUR_EC2_IP/v1/tts \
+  -H "x-api-key: tts_your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello Lagos! This is a test.",
+    "voice_id": "naija_female_warm",
+    "format": "mp3",
+    "tone": "friendly"
+  }' \
+  --output speech.mp3
+```
+
+## 🌐 Client Integration
+
+### Browser (JavaScript)
+
+```javascript
+// Simple fetch example
+async function speak(text, apiKey, baseUrl) {
+  const response = await fetch(`${baseUrl}/v1/tts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey
+    },
+    body: JSON.stringify({
+      text,
+      voice_id: 'naija_female_warm',
+      format: 'mp3',
+      tone: 'friendly'
+    })
+  });
+  
+  const audioBlob = await response.blob();
+  const audio = new Audio(URL.createObjectURL(audioBlob));
+  audio.play();
+}
+
+// Usage
+speak('Hello Lagos!', 'tts_your_api_key', 'http://YOUR_EC2_IP');
+```
+
+### n8n Workflow
+
+```json
+{
+  "nodes": [
+    {
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "tts-webhook",
+        "httpMethod": "POST"
+      }
+    },
+    {
+      "name": "TTS API",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "http://YOUR_EC2_IP/v1/tts",
+        "headers": {
+          "x-api-key": "tts_your_api_key",
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "text": "{{ $json.message }}",
+          "voice_id": "naija_female_warm",
+          "format": "mp3"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Python
+
+```python
+import requests
+
+def generate_speech(text, api_key, base_url):
+    response = requests.post(
+        f"{base_url}/v1/tts",
+        headers={
+            "x-api-key": api_key,
+            "Content-Type": "application/json"
+        },
+        json={
+            "text": text,
+            "voice_id": "naija_female_warm",
+            "format": "mp3",
+            "tone": "friendly"
+        }
+    )
+    
+    if response.status_code == 200:
+        with open("speech.mp3", "wb") as f:
+            f.write(response.content)
+        return "Speech saved to speech.mp3"
+    else:
+        return f"Error: {response.status_code} - {response.text}"
+
+# Usage
+result = generate_speech(
+    "Hello Lagos!", 
+    "tts_your_api_key", 
+    "http://YOUR_EC2_IP"
+)
+print(result)
+```
+
+## 🎭 Available Voices
+
+| Voice ID | Name | Description | Language |
+|----------|------|-------------|----------|
+| `naija_female_warm` | Nigerian Female Warm | Warm & lively; conversational | en-NG |
+| `naija_female_bold` | Nigerian Female Bold | Bold & confident; ads & announcements | en-NG |
+| `naija_male_deep` | Nigerian Male Deep | Deep & calm authority; news/support | en-NG |
+| `us_male_story` | US Male Storyteller | Calm storyteller; explainer videos | en-US |
+
+## 🎨 Tone Options
+
+| Tone | Description |
+|------|-------------|
+| `neutral` | Standard, clear delivery |
+| `friendly` | Warm, welcoming with light Pidgin |
+| `bold` | Confident and authoritative |
+| `calm` | Steady and soothing |
+| `sales` | Persuasive and upbeat |
+| `support` | Empathetic and reassuring |
+| `ads` | Catchy and punchy |
+
+## ⚙️ Configuration
 
 ### Environment Variables
 
 ```bash
-# Required
-OPENAI_API_KEY=sk-your-openai-key
-ODIADEV_API_KEY=your-odiadev-key
+# Database
+TTS_DB_PATH=/opt/tts-api/tts_api.db
 
-# Optional
-MODEL=gpt-4o-mini-tts
-DEFAULT_AUDIO_FORMAT=mp3
-PORT=8080
-RATE_LIMIT=120
-ALLOWED_ORIGINS=https://*.odia.dev;https://*.odiadev.com
-DOMAIN=yourdomain.com  # For HTTPS
+# Security
+TTS_ADMIN_TOKEN=admin_change_me_12345
+ALLOWED_ORIGINS=*
+
+# Limits
+MAX_TEXT_LEN=5000
+RATE_LIMIT_REQUESTS=60
+RATE_LIMIT_WINDOW=60
+RATE_LIMIT_CHARS_PER_DAY=300000
+
+# OpenAI
+OPENAI_API_KEY=sk-your-openai-key
+OPENAI_MODEL=gpt-4o-mini-tts
+OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Defaults
+DEFAULT_FORMAT=mp3
+DEFAULT_LANG=en-NG
+DEFAULT_TONE=neutral
+DEFAULT_SPEED=1.0
 ```
 
 ### Rate Limiting
-- Default: 120 requests per 15 minutes per IP
-- Configurable via `RATE_LIMIT` environment variable
 
-### CORS
-- Configurable origins via `ALLOWED_ORIGINS`
-- Supports wildcards: `https://*.odia.dev`
+- **Requests**: 60 per minute per API key
+- **Characters**: 300,000 per day per API key
+- **Text Length**: Maximum 5,000 characters per request
 
-## 🧪 Testing
+## 🔧 Deployment Options
 
-### Smoke Test
+### Option 1: EC2 User Data (Recommended)
+
+1. Copy `ec2-user-data.sh` content
+2. Paste into EC2 "User Data" field
+3. Launch instance
+4. Wait for automatic deployment
+
+### Option 2: Manual Deployment
+
 ```bash
-# Test all endpoints
-./scripts/smoke.sh http://your-instance-ip
+# Clone repository
+git clone <your-repo>
+cd odiadev-tts
 
-# Test with custom API key
-./scripts/smoke.sh http://your-instance-ip YOUR_API_KEY
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+nano .env
+
+# Start with Gunicorn
+gunicorn --bind 0.0.0.0:8000 --workers 4 tts_api_server:app
 ```
 
-### cURL Examples
-```bash
-# View all examples
-./scripts/curl-examples.sh http://your-instance-ip
+### Option 3: Docker (Optional)
 
-# Quick health check
-curl http://your-instance-ip/v1/health | jq '.'
+```dockerfile
+FROM python:3.11-slim
 
-# Generate audio
-curl -X POST http://your-instance-ip/v1/tts \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: YOUR_KEY" \
-  -d '{"text":"Hello from ODIADEV!","voice_id":"naija_female_warm"}' \
-  -o output.mp3
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY tts_api_server.py .
+EXPOSE 8000
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "tts_api_server:app"]
 ```
 
-## 🚀 Deployment Options
+## 📊 Monitoring & Logs
 
-### EC2 t3.small (Recommended)
-- **Cost**: ~$15/month
-- **Performance**: 2 vCPU, 2GB RAM
-- **Auto-scaling**: Optional with swapfile
-- **OS Support**: Ubuntu 22.04, Amazon Linux 2023
+### Service Status
 
-### Docker (Alternative)
 ```bash
-# Build and run
-docker build -t odiadev-tts .
-docker run -p 8080:8080 --env-file .env odiadev-tts
+# Check service status
+sudo systemctl status tts-api
 
-# Or use docker-compose
-docker-compose up -d
+# View logs
+sudo journalctl -u tts-api -f
+
+# Restart service
+sudo systemctl restart tts-api
 ```
 
-### Render (Alternative)
-- Deploy via `render.yaml`
-- Automatic HTTPS
-- Global CDN
+### Nginx Logs
 
-## 📊 Performance
+```bash
+# Access logs
+tail -f /var/log/nginx/tts-api-access.log
 
-### t3.small Specifications
-- **CPU**: 2 vCPUs (burstable)
-- **Memory**: 2GB RAM
-- **Network**: Up to 5 Gbps
-- **Storage**: EBS optimized
+# Error logs
+tail -f /var/log/nginx/tts-api-error.log
+```
 
-### Optimization Features
-- **Swapfile**: Auto-created if RAM < 3GB
-- **Rate Limiting**: Prevents abuse
-- **Connection Pooling**: Efficient OpenAI API usage
-- **Static File Serving**: Optimized for web interface
+### Application Logs
+
+```bash
+# API logs
+tail -f /opt/tts-api/tts_api.log
+
+# Gunicorn logs
+tail -f /opt/tts-api/access.log
+tail -f /opt/tts-api/error.log
+```
 
 ## 🔒 Security Features
 
-- **API Key Authentication**: Required for protected endpoints
-- **Input Validation**: Zod schema validation
-- **Rate Limiting**: Per-IP request throttling
-- **CORS Protection**: Configurable origin allowlist
-- **Environment Variables**: No secrets in code
-- **HTTPS Support**: Automatic SSL with certbot
+- **API Key Authentication** - Secure access control
+- **Rate Limiting** - Prevent abuse and ensure fair usage
+- **Input Validation** - Sanitize all user inputs
+- **CORS Configuration** - Control cross-origin access
+- **Security Headers** - XSS protection, content type validation
+- **Admin Token** - Separate admin access for key management
 
-## 🛠️ Management
-
-### Service Commands
-```bash
-# Start/stop/restart
-sudo systemctl start odiadev-tts
-sudo systemctl stop odiadev-tts
-sudo systemctl restart odiadev-tts
-
-# Status and logs
-sudo systemctl status odiadev-tts
-sudo journalctl -u odiadev-tts -f
-
-# Enable/disable
-sudo systemctl enable odiadev-tts
-sudo systemctl disable odiadev-tts
-```
-
-### Nginx Commands
-```bash
-# Test configuration
-sudo nginx -t
-
-# Reload configuration
-sudo systemctl reload nginx
-
-# Restart Nginx
-sudo systemctl restart nginx
-```
-
-### Rollback
-```bash
-# Complete system removal
-sudo ./deploy/ec2/rollback.sh
-```
-
-## 🐛 Troubleshooting
+## 🚨 Troubleshooting
 
 ### Common Issues
 
-**Service won't start**
-```bash
-# Check logs
-sudo journalctl -u odiadev-tts -n 50
+1. **502 Bad Gateway**
+   ```bash
+   sudo systemctl restart tts-api
+   sudo systemctl restart nginx
+   ```
 
-# Check environment file
-sudo cat /etc/odiadev-tts/.env
+2. **CORS Errors**
+   - Check `ALLOWED_ORIGINS` in environment
+   - Verify Nginx CORS headers
 
-# Verify Node.js
-node --version
-```
+3. **OpenAI API Errors**
+   - Verify `OPENAI_API_KEY` is set correctly
+   - Check OpenAI account credits
 
-**Nginx errors**
-```bash
-# Test configuration
-sudo nginx -t
-
-# Check error logs
-sudo tail -f /var/log/nginx/error.log
-```
-
-**API key issues**
-```bash
-# Verify key in environment
-sudo grep ODIADEV_API_KEY /etc/odiadev-tts/.env
-
-# Test with curl
-curl -H "x-api-key: YOUR_KEY" http://localhost:8080/v1/voices
-```
+4. **Database Issues**
+   ```bash
+   sudo chown ubuntu:ubuntu /opt/tts-api/tts_api.db
+   ```
 
 ### Health Checks
+
 ```bash
+# API health
+curl http://YOUR_EC2_IP/v1/health
+
 # Service status
-sudo systemctl is-active odiadev-tts
+sudo systemctl is-active tts-api
 
-# Port listening
-sudo netstat -tlnp | grep :8080
-
-# Process running
-ps aux | grep node
+# Port check
+netstat -tlnp | grep :8000
 ```
 
-## 📚 Development
+## 📈 Scaling
 
-### Local Development
-```bash
-# Install dependencies
-npm install
+### Horizontal Scaling
 
-# Start development server
-npm run dev
+1. **Load Balancer** - Use ALB/ELB in front of multiple instances
+2. **Database** - Migrate to PostgreSQL/MySQL for multi-instance
+3. **Caching** - Add Redis for voice caching
+4. **CDN** - Use CloudFront for audio file delivery
 
-# Run tests
-npm test
-```
+### Vertical Scaling
 
-### Project Structure
-```
-odiadev-tts/
-├── src/
-│   └── server.js          # Main application
-├── public/
-│   ├── index.html         # Web tester interface
-│   └── odiadev-voice-sdk.js # Browser SDK
-├── deploy/
-│   └── ec2/               # EC2 deployment scripts
-├── scripts/
-│   ├── smoke.sh           # Smoke test script
-│   └── curl-examples.sh   # cURL examples
-├── package.json           # Dependencies and scripts
-└── voices.json           # Voice profile definitions
-```
+1. **Increase Workers** - Edit Gunicorn worker count
+2. **Larger Instance** - Upgrade EC2 instance type
+3. **Database Optimization** - Add indexes, connection pooling
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create feature branch
+3. Make changes
+4. Test thoroughly
+5. Submit pull request
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see LICENSE file for details
 
 ## 🆘 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/odiadev-tts/issues)
-- **Documentation**: [Wiki](https://github.com/yourusername/odiadev-tts/wiki)
-- **Community**: [Discussions](https://github.com/yourusername/odiadev-tts/discussions)
-
-## 🙏 Acknowledgments
-
-- **OpenAI**: For the TTS API
-- **Express.js**: Web framework
-- **Nginx**: Reverse proxy
-- **Systemd**: Service management
+- **Issues**: GitHub Issues
+- **Documentation**: This README
+- **Examples**: `client-examples.html`
 
 ---
 
-**Made with ❤️ by ODIADEV Team**  
-**ODIADEV Zone Solution - Empowering Nigerian Tech**
+**Built with ❤️ for the Nigerian tech community**
